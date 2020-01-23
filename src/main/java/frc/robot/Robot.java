@@ -37,6 +37,13 @@ public class Robot extends TimedRobot {
   public static DriveTrain driveTrain;
   public static Joystick drive;
 
+  //For limelight auto
+  private boolean ma_LimelightHasValidTarget = false; //Does the limelight have a valid target
+  private double ma_LimelightDriveCommand = 0; //How hard to drive
+  private double ma_LimelightSteerCommand = 0; //How hard to steer
+
+  private PIDController ma_llsteer_pid = new PIDController(0.03, 0.000003, 0.003); //Create a PID controller for steering
+
   /**
    * This function is run when the robot is first started up and should be
    * used for any initialization code.
