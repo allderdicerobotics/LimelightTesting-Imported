@@ -20,6 +20,10 @@ import edu.wpi.first.networktables.*;
 import java.lang.Math;
 import edu.wpi.first.wpilibj.controller.PIDController;
 
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANEncoder;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -44,6 +48,11 @@ public class Robot extends TimedRobot {
 
   private PIDController ma_llsteer_pid = new PIDController(0.03, 0.000003, 0.003); //Create a PID controller for steering
 
+  private static final int deviceID = 1;
+  private CANSparkMax m_motor;                      //For SPARK MAX
+  private CANEncoder m_encoder;
+  private boolean leftinitline = false; //Have we left the initiation line yet
+
   /**
    * This function is run when the robot is first started up and should be
    * used for any initialization code.
@@ -57,6 +66,21 @@ public class Robot extends TimedRobot {
     driveTrain = new DriveTrain();
 
     drive = new Joystick(0);
+
+    m_motor = new CANSparkMax(deviceID, MotorType.kBrushless);
+
+    /**
+     * The RestoreFactoryDefaults method can be used to reset the configuration parameters
+     * in the SPARK MAX to their factory default state. If no argument is passed, these
+     * parameters will not persist between power cycles
+     */
+    m_motor.restoreFactoryDefaults();
+
+    /**
+    * In order to read encoder values an encoder object is created using the 
+    * getEncoder() method from an existing CANSparkMax object
+    */
+    m_encoder = m_motor.getEncoder();
   }
 
   /**
@@ -103,8 +127,19 @@ public class Robot extends TimedRobot {
       default:
         // Put default auto code here
         
-        //GO FORWARD 22 ROTATIONS
+        //GO FORWARD 22 ROTATIONS or 1.3 seconds
+        driveTrain.arcadeDrive(0.9, 0);
+        while(m_encoder.getPosition() <= 22) {leftinitline = false;} //Wait until left initiation line
+        leftinitline = true;
+        driveTrain.arcadeDrive(0, 0); //Stop
         //LIMELIGHT ALIGN
+        ma_LimelightSteerCommand = 2;
+        while(!(ma_LimelightSteerCommand < 0.1)) {
+          //While not close enough to target
+          Update_Limelight_Tracking_auto();
+          driveTrain.arcadeDrive(ma_LimelightDriveCommand, ma_LimelightSteerCommand);
+        }
+        driveTrain.arcadeDrive(0, 0);
         //SHOOT
         //GET BALLS
         //LIMELIGHT ALIGN
