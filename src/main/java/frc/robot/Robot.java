@@ -17,6 +17,9 @@ import edu.wpi.first.wpilibj.Joystick;
 
 import edu.wpi.first.networktables.*;
 
+import java.lang.Math;
+import edu.wpi.first.wpilibj.controller.PIDController;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -93,6 +96,12 @@ public class Robot extends TimedRobot {
       default:
         // Put default auto code here
         
+        //GO FORWARD 22 ROTATIONS
+        //LIMELIGHT ALIGN
+        //SHOOT
+        //GET BALLS
+        //LIMELIGHT ALIGN
+        //SHOOT
         break;
     }
   }
@@ -111,4 +120,68 @@ public class Robot extends TimedRobot {
   @Override
   public void testPeriodic() {
   }
+
+  public void Update_Limelight_Tracking_auto()
+  {
+    // Get data from the LL2 over networktables
+
+    double tv = NetworkTableInstance.getDefault().getTable("limelight").getEntry("tv").getDouble(0);
+    double tx = NetworkTableInstance.getDefault().getTable("limelight").getEntry("tx").getDouble(0);
+    double ty = NetworkTableInstance.getDefault().getTable("limelight").getEntry("ty").getDouble(0);
+    double ta = NetworkTableInstance.getDefault().getTable("limelight").getEntry("ta").getDouble(0);
+    
+    if (tv < 1.0) //If no valid target
+    {
+      ma_LimelightHasValidTarget = false; //We have no valid targets
+      ma_LimelightDriveCommand = 0.0; //Dont move
+      ma_LimelightSteerCommand = 0.0; //Dont steer
+      return; //End the function
+    }
+
+    ma_LimelightHasValidTarget = true; //Otherwise, LL2 has valid target
+
+    // Start with pid steering
+    
+    double steer_cmd = ma_llsteer_pid.calculate(0-tx); //PID, but negative so steering goes the right way
+
+    //convert ta (area) and ty (y angle)
+
+    //to tune, if nessecary,
+    //1. align limelight so it is facing a target directly straight
+    //2. get ta from limelight webpage (10.1.17.1:5801) under image
+    //3. measure distance with a tape measure
+    //4. update variables
+    //     a1 <-> ta from ll webpage (originally 1.203)
+    //     d1 <-> actual distance measured (originally 64)
+
+    double a1 = 1.203;
+    double d1 = 64;
+
+    //convert area and y degree to distance in inches
+
+    //Inverse square law:
+    //    a1 = area from testing
+    //    d1 = distance from testing
+    //    a2 = current measured area
+    //    d2 = distraw = actual distance from target
+    double distraw = Math.sqrt((a1*Math.pow(d1,2))/ta); 
+
+    //Right triangle: 
+    //                              ^  <- TARGET
+    //             distraw      /    |
+    //                     /         |
+    //                 /            _| not used
+    //             /  ) <-ty       | |
+    // ROBOT -> /--------------------|
+    //                  tdist
+    //EQN v
+    //cos(ty) = tdist / distraw
+    double tdist = Math.cos(ty)*distraw;
+
+    //result is in inches, output over smart dashboard
+    SmartDashboard.putNumber("Target Distance (in): ", tdist);
+
+    ma_LimelightSteerCommand = steer_cmd; //update steering values
+  }
+}
 }
